@@ -1,0 +1,23 @@
+# Environment & Secrets
+.env
+.env.local
+*.env
+
+# Python
+backend/.venv/
+**/__pycache__/
+*.py[cod]
+backend/*.db
+backend/uploads/
+.pytest_cache/
+
+# Node / Vite
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+*.local
+
+# System & IDE
+.DS_Store
+.vscode/
+.idea/
