@@ -254,7 +254,7 @@ async def update_complaint_status_admin(
 
     if data.status == ComplaintStatus.CLOSED and prev_status != ComplaintStatus.CLOSED:
         complaint.closed_at = datetime.now(timezone.utc)
-        if complaint.assigned_officer_id:
+        if complaint.assigned_officer_id and prev_status != ComplaintStatus.RESOLVED:
             await AssignmentService.update_officer_workload(db, complaint.assigned_officer_id, -1)
 
     db.add(complaint)
@@ -265,6 +265,129 @@ async def update_complaint_status_admin(
 
     await db.commit()
     return {"message": f"Status updated to {data.status.value}"}
+
+# Reopen Request Admin Management Endpoints
+@router.get("/reopen-requests")
+async def list_district_reopen_requests(
+    status_filter: Optional[str] = "PENDING",
+    current_user: User = Depends(require_district_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    district_code = current_user.district_admin_profile.district_code
+    query = (
+        select(ReopenRequest)
+        .join(Complaint, ReopenRequest.complaint_id == Complaint.id)
+        .options(selectinload(ReopenRequest.complaint))
+        .where(Complaint.district_code == district_code)
+    )
+    if status_filter:
+        query = query.where(ReopenRequest.status == status_filter)
+
+    query = query.order_by(ReopenRequest.created_at.desc())
+    res = await db.execute(query)
+    return res.scalars().all()
+
+@router.post("/reopen-requests/{request_id}/approve")
+async def approve_reopen_request(
+    request_id: str,
+    remarks: Optional[str] = None,
+    current_user: User = Depends(require_district_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    res = await db.execute(
+        select(ReopenRequest)
+        .options(selectinload(ReopenRequest.complaint))
+        .where(ReopenRequest.id == request_id)
+    )
+    req = res.scalar_one_or_none()
+    if not req:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Reopen request not found")
+
+    complaint = req.complaint
+    enforce_district_isolation(current_user, complaint.district_code)
+
+    if req.status != "PENDING":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Reopen request is already {req.status}")
+
+    prev_status = complaint.status.value
+    req.status = "APPROVED"
+    req.reviewed_by_admin_id = current_user.id
+    db.add(req)
+
+    complaint.status = ComplaintStatus.REOPENED
+    db.add(complaint)
+
+    if complaint.assigned_officer_id:
+        await AssignmentService.update_officer_workload(db, complaint.assigned_officer_id, +1)
+
+    await ComplaintService.record_status_history(
+        db, complaint.id, prev_status, ComplaintStatus.REOPENED.value,
+        current_user.id, "DISTRICT_ADMIN", f"Reopen request approved by Admin. Remarks: {remarks or 'Approved'}"
+    )
+
+    if complaint.citizen_id:
+        await NotificationService.create_notification(
+            db, recipient_user_id=complaint.citizen_id,
+            type="REOPEN_APPROVED",
+            title=f"Reopen Approved: {complaint.complaint_no}",
+            message=f"Your reopen request for grievance {complaint.complaint_no} has been APPROVED.",
+            complaint_id=complaint.id
+        )
+
+    if complaint.assigned_officer_id:
+        await NotificationService.create_notification(
+            db, recipient_user_id=complaint.assigned_officer_id,
+            type="REOPEN_ASSIGNMENT",
+            title=f"Reopened Grievance {complaint.complaint_no}",
+            message=f"Reopened grievance {complaint.complaint_no} has been assigned back to you for action.",
+            complaint_id=complaint.id
+        )
+
+    await db.commit()
+    return {"message": "Reopen request approved successfully. Complaint status set to REOPENED."}
+
+@router.post("/reopen-requests/{request_id}/reject")
+async def reject_reopen_request(
+    request_id: str,
+    remarks: Optional[str] = None,
+    current_user: User = Depends(require_district_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    res = await db.execute(
+        select(ReopenRequest)
+        .options(selectinload(ReopenRequest.complaint))
+        .where(ReopenRequest.id == request_id)
+    )
+    req = res.scalar_one_or_none()
+    if not req:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Reopen request not found")
+
+    complaint = req.complaint
+    enforce_district_isolation(current_user, complaint.district_code)
+
+    if req.status != "PENDING":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Reopen request is already {req.status}")
+
+    req.status = "REJECTED"
+    req.reviewed_by_admin_id = current_user.id
+    db.add(req)
+
+    await ComplaintService.record_status_history(
+        db, complaint.id, complaint.status.value, complaint.status.value,
+        current_user.id, "DISTRICT_ADMIN", f"Reopen request rejected by Admin. Reason: {remarks or 'Rejected'}"
+    )
+
+    if complaint.citizen_id:
+        await NotificationService.create_notification(
+            db, recipient_user_id=complaint.citizen_id,
+            type="REOPEN_REJECTED",
+            title=f"Reopen Request Rejected: {complaint.complaint_no}",
+            message=f"Your reopen request for grievance {complaint.complaint_no} was rejected. Remarks: {remarks or 'None'}",
+            complaint_id=complaint.id
+        )
+
+    await db.commit()
+    return {"message": "Reopen request rejected."}
 
 # Officer Management Endpoints
 @router.get("/officers", response_model=List[OfficerResponse])

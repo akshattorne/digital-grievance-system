@@ -14,9 +14,9 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     except Exception:
         return False
 
-def get_password_hash(password: str) -> str:
+def get_password_hash(password: str, rounds: int = 12) -> str:
     pwd_bytes = password.encode('utf-8')[:72]
-    salt = bcrypt.gensalt(rounds=12)
+    salt = bcrypt.gensalt(rounds=rounds)
     return bcrypt.hashpw(pwd_bytes, salt).decode('utf-8')
 
 def hash_token(token: str) -> str:

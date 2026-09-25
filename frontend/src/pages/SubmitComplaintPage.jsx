@@ -109,18 +109,51 @@ export const SubmitComplaintPage = () => {
     }
   };
 
+  const [selectedFile, setSelectedFile] = useState(null);
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 10 * 1024 * 1024) {
+        setError('File size must not exceed 10MB.');
+        setSelectedFile(null);
+        return;
+      }
+      setSelectedFile(file);
+      setError('');
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
     try {
+      let createdComplaintId = null;
       if (isAnonymous) {
         const res = await api.post('/complaints/submit-anonymous', formData);
+        createdComplaintId = res.data.id;
         setAnonSuccessData(res.data);
       } else {
         const res = await api.post('/complaints/submit', formData);
-        navigate(`/complaints/${res.data.id}`);
+        createdComplaintId = res.data.id;
+      }
+
+      if (selectedFile && createdComplaintId) {
+        try {
+          const fileData = new FormData();
+          fileData.append('file', selectedFile);
+          await api.post(`/attachments/upload?complaint_id=${createdComplaintId}`, fileData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+          });
+        } catch (uploadErr) {
+          console.error('Attachment upload warning:', uploadErr);
+        }
+      }
+
+      if (!isAnonymous && createdComplaintId) {
+        navigate(`/complaints/${createdComplaintId}`);
       }
     } catch (err) {
       const detail = err.response?.data?.detail;
@@ -314,6 +347,21 @@ export const SubmitComplaintPage = () => {
               value={formData.location_address}
               onChange={(e) => setFormData({ ...formData, location_address: e.target.value })}
             />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              <Upload size={16} /> Supporting Document / Attachment (Optional)
+            </label>
+            <input
+              type="file"
+              accept="image/*,.pdf,video/mp4,audio/mpeg,audio/wav,audio/mp3"
+              className="form-input"
+              onChange={handleFileChange}
+            />
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              Supported: Images (JPG, PNG, WEBP), PDF, Video (MP4), Audio (MP3/WAV). Max 10MB.
+            </div>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>

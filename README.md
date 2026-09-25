@@ -8,23 +8,27 @@
 
 A complete, production-grade civic grievance redressal portal built for the **Government of Madhya Pradesh** and integrated with **MPOnline** governance workflows.
 
-The application provides transparent, time-bound, SLA-monitored grievance redressal for citizens across all **55 districts of Madhya Pradesh**, with strict district data isolation, dynamic category-to-department routing, structured citizen-officer communication, administrative review mechanisms, optional Gemini AI recommendation & executive insight layer, and bilingual support (English + Hindi).
+The application provides transparent, time-bound, SLA-monitored grievance redressal for citizens across all **55 districts of Madhya Pradesh**, with strict district data isolation, dynamic category-to-department routing, structured citizen-officer communication, District Admin reopen approval workflows, supporting document attachments, optional Gemini AI recommendation & executive insight layer, and bilingual support (English + Hindi).
 
 ---
 
 ## 🏛️ System Features & Key Highlights
 
-- **Registered Citizen Portal**: Registration, Login with JWT access/refresh token rotation, Password Reset, Dashboard, Grievance Submission, SLA Countdown, Structured Communication, Resolution Feedback & Reopen Requests.
-- **Anonymous Citizen Engine**: Submit grievances without creating an account. Generates Complaint ID + Secret Tracking Code + Secure Session Access Token. Citizen identity is never exposed unnecessarily.
-- **55 Madhya Pradesh Districts & 440 Department Officer Accounts**: Authoritative seeding provisions District Admin accounts for all 55 MP districts and 440 officer accounts (55 districts × 8 departments).
+- **User Roles & Authorization**:
+  - **Registered Citizen**: Registration, Login with JWT access/refresh token rotation, Password Reset, Dashboard, Grievance Submission, Attachment Upload, SLA Countdown, Structured Communication, Resolution Feedback & Reopen Requests.
+  - **Anonymous Citizen**: Submit grievances without creating an account. Generates Complaint ID + Secret Tracking Code + Secure Session Access Token. Citizen identity is never exposed unnecessarily.
+  - **District Admin**: Highest operational administrative role per district. Manage district complaints, assign/reassign officers, review and approve/reject reopen requests, set status, monitor SLAs, and manage grievance officers. Isolated strictly to their assigned district.
+  - **Grievance Officer**: Work on assigned grievances within their department and district. Move complaints to `IN_PROGRESS`, place `ON_HOLD`, communicate with citizens, and mark `RESOLVED` with resolution details.
+
+- **55 Madhya Pradesh Districts & 440 Department Officer Accounts**: Authoritative database seeding provisions District Admin accounts for all 55 MP districts and 440 officer accounts (55 districts × 8 departments).
 - **Strict District Data Isolation**: District Admins and Grievance Officers can ONLY query, manage, and view data belonging to their assigned district. Cross-district data queries return HTTP 403 Forbidden on the backend.
-- **Dynamic Category → Department SLA Routing**: System maps category to department. Priority (`HIGH`: 0.5x, `MEDIUM`: 1.0x, `LOW`: 1.5x) dynamically modifies the SLA deadline.
+- **Dynamic Category → Department SLA Routing**: Database-driven category mapping. Priority (`HIGH`: 0.5x, `MEDIUM`: 1.0x, `LOW`: 1.5x) dynamically calculates the SLA deadline.
 - **Workload-Based Officer Assignment**: System auto-recommends eligible officers based on matching department, same district, active availability status, and lowest active workload.
-- **Administrative Review Authority**: Internal authorized oversight portal allowing citizens to submit misconduct reports against District Admins. Validated report threshold flags District Admins for human review (NO automated penalty or replacement).
+- **Strict Reopen Workflow**: Reopening a `RESOLVED` or `CLOSED` complaint requires a citizen to submit a `ReopenRequest`. Only District Admin approval transitions the complaint to `REOPENED` and restores officer workload.
+- **Attachment Workflow**: Multi-format supporting document uploads (Images, PDF, MP4, MP3/WAV) with file size validation (max 10MB) and secure access controls.
 - **Optional Gemini AI Layer**: Uses Gemini API for smart category/priority recommendations and executive district insights. IF GEMINI IS UNAVAILABLE OR UNCONFIGURED, THE SYSTEM AUTOMATICALLY FALLS BACK TO A KEYWORD RULE ENGINE WITHOUT BREAKING CORE FUNCTIONALITY.
-- **Secure Credential Management**: No hardcoded passwords in version control. Running `python seed.py` or `python scripts/generate_demo_credentials.py` generates cryptographically secure passwords and exports them to `.local/LOCAL_CREDENTIALS.md` (which is strictly gitignored).
+- **Secure Credential Management**: No hardcoded passwords in version control. Running `python seed.py` generates individual cryptographically secure passwords for all 496 accounts and exports them strictly to `.local/LOCAL_CREDENTIALS.md` (gitignored).
 - **Bilingual Interface (i18n)**: Instant English and Hindi UI toggle across public landing page, forms, dashboards, and error messages.
-- **Public Portal Analytics**: Aggregated and anonymized public metrics & category trends charts. ZERO citizen names, emails, phones, or private text exposed.
 
 ---
 
@@ -39,11 +43,10 @@ python seed.py
 ```
 This script provisions:
 1. **1 Registered Citizen Demo Account** (`citizen@example.com`)
-2. **1 Administrative Review Authority Account** (`review.authority@mp.gov.in`)
-3. **55 District Admin Accounts** (`admin.<district_code_lower>@mp.gov.in`, e.g., `admin.ind@mp.gov.in`, `admin.bho@mp.gov.in`)
-4. **440 Department Officer Accounts** (`officer.<district_code_lower>.<dept_code_lower>@mp.gov.in`, e.g., `officer.ind.pwd@mp.gov.in`)
+2. **55 District Admin Accounts** (`admin.<district_code_lower>@mp.gov.in`, e.g., `admin.ind@mp.gov.in`, `admin.bho@mp.gov.in`)
+3. **440 Department Officer Accounts** (`officer.<district_code_lower>.<dept_code_lower>@mp.gov.in`, e.g., `officer.ind.pwd@mp.gov.in`)
 
-Plaintext generated passwords are automatically saved to your local gitignored file:
+Plaintext generated passwords are saved strictly to your local gitignored file:
 `digital-grievance-system/.local/LOCAL_CREDENTIALS.md`
 
 ---
@@ -65,9 +68,9 @@ Plaintext generated passwords are automatically saved to your local gitignored f
 digital-grievance-system/
 ├── backend/
 │   ├── app/
-│   │   ├── api/            # REST API Routes (auth, complaints, district_admin, officers, review, ai, etc.)
+│   │   ├── api/            # REST API Routes (auth, complaints, district_admin, officers, attachments, ai, analytics, notifications)
 │   │   ├── core/           # Security, Permissions, Database Config, Settings
-│   │   ├── models/         # SQLAlchemy Models (User, Grievance, Complaint, Notification, Review, AI)
+│   │   ├── models/         # SQLAlchemy Models (User, Grievance, Complaint, Notification, AI)
 │   │   ├── schemas/        # Pydantic Schemas
 │   │   ├── services/       # Business Logic (SLA, Assignment, AI, Email, Storage)
 │   │   └── main.py         # FastAPI App Entrypoint & CORS setup
@@ -82,7 +85,7 @@ digital-grievance-system/
 │   │   ├── i18n/           # English (en.json) & Hindi (hi.json) Translations
 │   │   ├── pages/          # LandingPage, Login, Register, Dashboards, ComplaintDetail
 │   │   ├── services/       # Axios API Client
-      │   └── styles/         # Global Civic Styling & Responsive Tokens
+│   │   └── styles/         # Global Civic Styling & Responsive Tokens
 │   └── package.json
 ├── docs/                   # Architecture, DB Schema, API Specs, Deployment & Testing Reports
 ├── .env.example

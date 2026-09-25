@@ -261,6 +261,7 @@ async def submit_anonymous_complaint(
         pass
 
     return {
+        "id": complaint.id,
         "complaint_no": complaint_no,
         "tracking_code": tracking_code,
         "anonymous_access_token": raw_token,
@@ -417,9 +418,9 @@ async def request_reopen_complaint(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    RESOLVED -> Reopen request directly sets complaint status to REOPENED.
-    CLOSED -> Reopen request creates a PENDING request for District Admin review and approval.
-    Citizen NEVER directly mutates the status string without logic.
+    Submits a ReopenRequest for RESOLVED or CLOSED complaints.
+    The request is set to PENDING for District Admin review and approval.
+    Citizen NEVER directly mutates the status string without admin approval.
     """
     result = await db.execute(select(Complaint).where(Complaint.id == complaint_id))
     complaint = result.scalar_one_or_none()
@@ -427,34 +428,45 @@ async def request_reopen_complaint(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Complaint not found")
     actor_role = _authorize_complaint_access(complaint, current_user, credentials)
 
-    if complaint.status == ComplaintStatus.RESOLVED:
-        complaint.status = ComplaintStatus.REOPENED
-        db.add(complaint)
-        req = ReopenRequest(
-            complaint_id=complaint.id,
-            justification=data.justification,
-            status="APPROVED"
-        )
-        db.add(req)
-        await ComplaintService.record_status_history(
-            db, complaint.id, ComplaintStatus.RESOLVED.value, ComplaintStatus.REOPENED.value,
-            current_user.id if current_user else None, actor_role, f"Direct Reopen: {data.justification}"
-        )
-        await db.commit()
-        return {"message": "Complaint reopened successfully.", "status": "REOPENED"}
-
-    elif complaint.status == ComplaintStatus.CLOSED:
-        req = ReopenRequest(
-            complaint_id=complaint.id,
-            justification=data.justification,
-            status="PENDING"
-        )
-        db.add(req)
-        await db.commit()
-        return {"message": "Reopen request submitted for District Admin review.", "status": "PENDING_ADMIN_REVIEW"}
-
-    else:
+    if complaint.status not in [ComplaintStatus.RESOLVED, ComplaintStatus.CLOSED]:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only RESOLVED or CLOSED complaints can be requested to reopen")
+
+    existing_pending = await db.execute(
+        select(ReopenRequest).where(
+            ReopenRequest.complaint_id == complaint.id,
+            ReopenRequest.status == "PENDING"
+        )
+    )
+    if existing_pending.scalar_one_or_none():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A pending reopen request already exists for this complaint")
+
+    req = ReopenRequest(
+        complaint_id=complaint.id,
+        justification=data.justification,
+        evidence_attachment_id=getattr(data, 'evidence_attachment_id', None),
+        status="PENDING"
+    )
+    db.add(req)
+    await ComplaintService.record_status_history(
+        db, complaint.id, complaint.status.value, complaint.status.value,
+        current_user.id if current_user else None, actor_role, f"Reopen Request Submitted: {data.justification}"
+    )
+    await db.commit()
+
+    admin_profile_res = await db.execute(
+        select(DistrictAdminProfile).where(DistrictAdminProfile.district_code == complaint.district_code)
+    )
+    admin_profile = admin_profile_res.scalar_one_or_none()
+    if admin_profile:
+        await NotificationService.create_notification(
+            db, recipient_user_id=admin_profile.user_id,
+            type="REOPEN_REQUEST",
+            title=f"Reopen Request for {complaint.complaint_no}",
+            message=f"A reopen request was submitted for grievance {complaint.complaint_no}: {data.justification[:100]}",
+            complaint_id=complaint.id
+        )
+
+    return {"message": "Reopen request submitted successfully for District Admin review.", "status": "PENDING"}
 
 @router.post("/{complaint_id}/escalate")
 async def escalate_complaint(

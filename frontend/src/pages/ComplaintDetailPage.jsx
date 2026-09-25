@@ -1,14 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import api from '../services/api';
-import { useAuth } from '../contexts/AuthContext';
 import { StatusBadge } from '../components/StatusBadge';
 import { PriorityBadge } from '../components/PriorityBadge';
-import { Clock, Send, MessageSquare, AlertTriangle, RefreshCw, Star, CheckCircle, FileText } from 'lucide-react';
+import { Clock, Send, MessageSquare, AlertTriangle, RefreshCw, CheckCircle, FileText } from 'lucide-react';
 
 export const ComplaintDetailPage = () => {
   const { id } = useParams();
-  const { user } = useAuth();
 
   const [complaint, setComplaint] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -18,7 +16,6 @@ export const ComplaintDetailPage = () => {
   // Reopen Modal
   const [showReopenModal, setShowReopenModal] = useState(false);
   const [reopenJustification, setReopenJustification] = useState('');
-  const [reopenStatusMsg, setReopenStatusMsg] = useState('');
 
   // Feedback State
   const [rating, setRating] = useState(5);
@@ -135,6 +132,28 @@ export const ComplaintDetailPage = () => {
           <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
             <strong>Location:</strong> {complaint.location_address}
           </div>
+
+          {complaint.attachments?.length > 0 && (
+            <div style={{ marginTop: '1rem' }}>
+              <h4 style={{ fontSize: '0.9rem', color: 'var(--gov-navy)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                <FileText size={16} /> Supporting Attachments ({complaint.attachments.length})
+              </h4>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                {complaint.attachments.map((att) => (
+                  <a
+                    key={att.id}
+                    href={`/api/v1/attachments/view/${att.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn btn-outline"
+                    style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem', background: '#ffffff' }}
+                  >
+                    📎 {att.file_name} ({(att.file_size / 1024).toFixed(1)} KB)
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Resolution Details if RESOLVED / CLOSED */}
@@ -289,9 +308,7 @@ export const ComplaintDetailPage = () => {
               Request Complaint Reopen
             </h3>
             <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
-              {complaint.status === 'CLOSED'
-                ? 'CLOSED complaints require justification and District Admin approval.'
-                : 'RESOLVED complaints will be directly marked REOPENED.'}
+              Submitting a reopen request will send it to the District Admin for review and approval.
             </p>
 
             <form onSubmit={handleReopenSubmit}>

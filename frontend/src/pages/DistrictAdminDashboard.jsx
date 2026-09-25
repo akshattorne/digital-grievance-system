@@ -18,6 +18,7 @@ export const DistrictAdminDashboard = () => {
   const [analyticsData, setAnalyticsData] = useState(null);
   const [complaints, setComplaints] = useState([]);
   const [officers, setOfficers] = useState([]);
+  const [reopenRequests, setReopenRequests] = useState([]);
   const [aiInsights, setAiInsights] = useState(null);
 
   const [statusFilter, setStatusFilter] = useState('');
@@ -38,16 +39,18 @@ export const DistrictAdminDashboard = () => {
 
   const fetchData = async () => {
     try {
-      const [dashRes, compRes, offRes, deptRes] = await Promise.all([
+      const [dashRes, compRes, offRes, deptRes, reopenRes] = await Promise.all([
         api.get('/district-admin/dashboard'),
         api.get(`/district-admin/complaints?status_filter=${statusFilter}&search_query=${searchQuery}`),
         api.get('/district-admin/officers'),
-        api.get('/complaints/departments').catch(() => ({ data: [] }))
+        api.get('/complaints/departments').catch(() => ({ data: [] })),
+        api.get('/district-admin/reopen-requests?status_filter=PENDING').catch(() => ({ data: [] }))
       ]);
 
       setDashboardMetrics(dashRes.data);
       setComplaints(compRes.data);
       setOfficers(offRes.data);
+      setReopenRequests(reopenRes.data);
 
       const depts = deptRes.data.length > 0 ? deptRes.data : [
         { id: 'PWD', name_en: 'Public Works Department (PWD)' },
@@ -136,6 +139,28 @@ export const DistrictAdminDashboard = () => {
     }
   };
 
+  const handleApproveReopen = async (reqId) => {
+    try {
+      await api.post(`/district-admin/reopen-requests/${reqId}/approve`);
+      alert('Reopen request approved successfully. Complaint is now REOPENED.');
+      fetchData();
+    } catch (err) {
+      alert(err.response?.data?.detail || 'Approval failed');
+    }
+  };
+
+  const handleRejectReopen = async (reqId) => {
+    const reason = prompt('Enter rejection reason for citizen:');
+    if (reason === null) return;
+    try {
+      await api.post(`/district-admin/reopen-requests/${reqId}/reject?remarks=${encodeURIComponent(reason)}`);
+      alert('Reopen request rejected.');
+      fetchData();
+    } catch (err) {
+      alert(err.response?.data?.detail || 'Rejection failed');
+    }
+  };
+
   return (
     <div className="container" style={{ padding: '3rem 1.5rem' }}>
       {/* Header */}
@@ -150,7 +175,7 @@ export const DistrictAdminDashboard = () => {
         </div>
 
         {/* Tab Navigation */}
-        <div style={{ display: 'flex', gap: '0.5rem', background: '#ffffff', padding: '0.3rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
+        <div style={{ display: 'flex', gap: '0.5rem', background: '#ffffff', padding: '0.3rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', flexWrap: 'wrap' }}>
           <button
             onClick={() => setActiveTab('overview')}
             className={`btn ${activeTab === 'overview' ? 'btn-primary' : 'btn-outline'}`}
@@ -164,6 +189,13 @@ export const DistrictAdminDashboard = () => {
             style={{ fontSize: '0.85rem', padding: '0.45rem 0.85rem' }}
           >
             Complaint Management
+          </button>
+          <button
+            onClick={() => setActiveTab('reopen_requests')}
+            className={`btn ${activeTab === 'reopen_requests' ? 'btn-primary' : 'btn-outline'}`}
+            style={{ fontSize: '0.85rem', padding: '0.45rem 0.85rem' }}
+          >
+            Reopen Requests ({reopenRequests.length})
           </button>
           <button
             onClick={() => setActiveTab('officers')}
@@ -318,6 +350,59 @@ export const DistrictAdminDashboard = () => {
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {/* REOPEN REQUESTS TAB */}
+      {activeTab === 'reopen_requests' && (
+        <div className="card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+            <h3 style={{ fontSize: '1.1rem', color: 'var(--gov-navy)' }}>
+              Pending Citizen Reopen Requests ({reopenRequests.length})
+            </h3>
+          </div>
+
+          {reopenRequests.length === 0 ? (
+            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+              No pending reopen requests for this district.
+            </div>
+          ) : (
+            <div className="table-container">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Grievance No</th>
+                    <th>Subject</th>
+                    <th>Current Status</th>
+                    <th>Justification</th>
+                    <th>Submitted At</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {reopenRequests.map((r) => (
+                    <tr key={r.id}>
+                      <td style={{ fontWeight: '700', fontFamily: 'monospace' }}>{r.complaint?.complaint_no || r.complaint_id}</td>
+                      <td>{r.complaint?.subject || 'N/A'}</td>
+                      <td><StatusBadge status={r.complaint?.status || 'RESOLVED'} /></td>
+                      <td style={{ maxWidth: '300px', fontSize: '0.85rem' }}>{r.justification}</td>
+                      <td style={{ fontSize: '0.8rem' }}>{new Date(r.created_at).toLocaleString()}</td>
+                      <td>
+                        <div style={{ display: 'flex', gap: '0.35rem' }}>
+                          <button onClick={() => handleApproveReopen(r.id)} className="btn btn-primary" style={{ padding: '0.25rem 0.6rem', fontSize: '0.75rem', background: '#059669' }}>
+                            Approve
+                          </button>
+                          <button onClick={() => handleRejectReopen(r.id)} className="btn btn-danger" style={{ padding: '0.25rem 0.6rem', fontSize: '0.75rem' }}>
+                            Reject
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 

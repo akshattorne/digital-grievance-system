@@ -14,14 +14,17 @@ FastAPI automatically generates interactive OpenAPI documentation at `/api/docs`
 - `GET /auth/me`: Retrieve current logged-in user profile.
 
 ### 2. Complaints & Lifecycle (`/complaints`)
+- `GET /complaints/districts`: Fetch active Madhya Pradesh districts.
+- `GET /complaints/categories`: Fetch active grievance categories and department mappings.
+- `GET /complaints/departments`: Fetch active public departments.
 - `POST /complaints/submit`: Registered citizen grievance submission.
 - `POST /complaints/submit-anonymous`: Anonymous citizen grievance submission (returns Complaint ID + Secret Tracking Code + Access Token).
 - `POST /complaints/track-anonymous`: Authenticate Complaint ID + Tracking Code for anonymous access token.
 - `GET /complaints/my-complaints`: Registered citizen grievance list.
-- `GET /complaints/{complaint_id}`: Retrieve detailed grievance, timeline, messages, feedback.
+- `GET /complaints/{complaint_id}`: Retrieve detailed grievance, timeline, messages, feedback, attachments.
 - `POST /complaints/{complaint_id}/messages`: Post message in communication thread.
 - `POST /complaints/{complaint_id}/feedback`: Submit rating & satisfaction feedback.
-- `POST /complaints/{complaint_id}/reopen`: Submit reopen request.
+- `POST /complaints/{complaint_id}/reopen`: Submit reopen request (creates PENDING ReopenRequest for District Admin review).
 - `POST /complaints/{complaint_id}/escalate`: Submit escalation to District Admin.
 
 ### 3. District Admin Control (`/district-admin`)
@@ -30,7 +33,10 @@ FastAPI automatically generates interactive OpenAPI documentation at `/api/docs`
 - `PATCH /district-admin/complaints/{id}/correct`: Correct category, department, priority.
 - `POST /district-admin/complaints/{id}/assign`: Assign officer to complaint.
 - `GET /district-admin/recommend-officer/{id}`: Workload-based officer recommendation.
-- `POST /district-admin/complaints/{id}/status`: Update complaint status (Put on hold, Reject duplicate).
+- `POST /district-admin/complaints/{id}/status`: Update complaint status (Put on hold, Reject duplicate, Close).
+- `GET /district-admin/reopen-requests`: List pending reopen requests for the district.
+- `POST /district-admin/reopen-requests/{id}/approve`: Approve reopen request (transitions status to REOPENED).
+- `POST /district-admin/reopen-requests/{id}/reject`: Reject reopen request with reason.
 - `GET /district-admin/officers` & `POST /district-admin/officers`: Manage district officers.
 
 ### 4. Grievance Officer (`/officer`)
@@ -40,11 +46,9 @@ FastAPI automatically generates interactive OpenAPI documentation at `/api/docs`
 - `POST /officer/complaints/{id}/hold`: Place ON_HOLD with reason.
 - `POST /officer/complaints/{id}/resolve`: Mark RESOLVED with summary & resolution date.
 
-### 5. Administrative Review Authority (`/admin-review`)
-- `POST /admin-review/reports`: Citizens file report against District Admin.
-- `GET /admin-review/reports`: View admin misconduct reports.
-- `PATCH /admin-review/reports/{id}/status`: Set status (UNDER_REVIEW, VALID, INVALID, DISMISSED).
-- `GET /admin-review/flagged-admins`: View District Admins crossing valid report threshold for human review.
+### 5. Attachments (`/attachments`)
+- `POST /attachments/upload`: Upload supporting attachment file for complaint (images, PDF, MP4, MP3/WAV, max 10MB).
+- `GET /attachments/view/{id}`: Securely view/download authorized complaint attachment.
 
 ### 6. Analytics (`/analytics`)
 - `GET /analytics/public`: Aggregated anonymized metrics for public portal (NO personal identity leaked).

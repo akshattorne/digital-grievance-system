@@ -51,14 +51,10 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: Optional[str] = None
     GEMINI_MODEL: str = "gemini-1.5-flash"
     
-    # Administrative Review Threshold
-    ADMIN_REPORT_THRESHOLD: int = 3  # Valid reports flagging district admin for review
-    
     # Demo Seed Passwords (provisioned securely if set, otherwise auto-generated)
     SEED_CITIZEN_PASSWORD: Optional[str] = None
     SEED_ADMIN_PASSWORD: Optional[str] = None
     SEED_OFFICER_PASSWORD: Optional[str] = None
-    SEED_REVIEW_PASSWORD: Optional[str] = None
 
     model_config = ConfigDict(env_file=".env", case_sensitive=True)
 

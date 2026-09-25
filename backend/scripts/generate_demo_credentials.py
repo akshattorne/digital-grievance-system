@@ -125,11 +125,6 @@ async def generate_and_seed_credentials(provided_session: Optional[AsyncSession]
     credentials_log.append("> **SECURITY NOTICE**: This file contains local test credentials. It is added to `.gitignore` and must NEVER be committed to version control.\n\n")
 
     async def _run_seeding(session: AsyncSession):
-        # 0. Clean up deprecated ADMIN_REVIEW_AUTHORITY records from DB
-        from sqlalchemy import text
-        await session.execute(text("DELETE FROM users WHERE role = 'ADMIN_REVIEW_AUTHORITY' OR email = 'review.authority@mp.gov.in'"))
-        await session.commit()
-
         # 1. Bulk pre-fetch districts & departments
         existing_dists = {d.code: d for d in (await session.execute(select(District))).scalars().all()}
         for code, en, hi in MP_DISTRICTS:
@@ -167,9 +162,6 @@ async def generate_and_seed_credentials(provided_session: Optional[AsyncSession]
 
         await session.flush()
 
-        # 3. Pre-compute hash for fast bulk seeding
-        precomputed_hash = get_password_hash("DemoSecret2026!")
-
         # Pre-fetch existing users & profiles into memory map to eliminate 1000s of SQL round-trips
         existing_users = {u.email.lower(): u for u in (await session.execute(select(User).options(selectinload(User.district_admin_profile), selectinload(User.officer_profile)))).scalars().all()}
         existing_officers_by_code = {op.officer_id: op for op in (await session.execute(select(OfficerProfile))).scalars().all()}
@@ -178,7 +170,7 @@ async def generate_and_seed_credentials(provided_session: Optional[AsyncSession]
         def provision_user_in_memory(email: str, name: str, role: UserRole, mobile: str = "9800000000"):
             email_clean = email.lower().strip()
             plain_pwd = generate_random_password(14)
-            pwd_hash = precomputed_hash
+            pwd_hash = get_password_hash(plain_pwd, rounds=4)
 
             user = existing_users.get(email_clean)
             if not user:
@@ -282,19 +274,13 @@ async def generate_and_seed_credentials(provided_session: Optional[AsyncSession]
         async with AsyncSessionLocal() as session:
             await _run_seeding(session)
 
-    # Save to local gitignored markdown files
+    # Save to local gitignored markdown file
     local_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".local"))
     os.makedirs(local_dir, exist_ok=True)
     local_filepath = os.path.join(local_dir, "LOCAL_CREDENTIALS.md")
-    
-    docs_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "docs"))
-    os.makedirs(docs_dir, exist_ok=True)
-    docs_filepath = os.path.join(docs_dir, "LOCAL_CREDENTIALS.md")
 
     content_str = "".join(credentials_log)
     with open(local_filepath, "w", encoding="utf-8") as f:
-        f.write(content_str)
-    with open(docs_filepath, "w", encoding="utf-8") as f:
         f.write(content_str)
 
     admin_count = len(MP_DISTRICTS)
