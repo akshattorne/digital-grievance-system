@@ -15,8 +15,6 @@ import { SubmitComplaintPage } from './pages/SubmitComplaintPage';
 import { ComplaintDetailPage } from './pages/ComplaintDetailPage';
 import { DistrictAdminDashboard } from './pages/DistrictAdminDashboard';
 import { OfficerDashboard } from './pages/OfficerDashboard';
-import { AdminReviewDashboard } from './pages/AdminReviewDashboard';
-import { AdminReportPage } from './pages/AdminReportPage';
 
 // Role Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -45,7 +43,6 @@ export default function App() {
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
                 <Route path="/track" element={<AnonymousTrackPage />} />
-                <Route path="/admin-report" element={<AdminReportPage />} />
                 <Route path="/submit" element={<SubmitComplaintPage />} />
                 <Route path="/complaints/:id" element={<ComplaintDetailPage />} />
 
@@ -75,16 +72,6 @@ export default function App() {
                   element={
                     <ProtectedRoute allowedRoles={['OFFICER']}>
                       <OfficerDashboard />
-                    </ProtectedRoute>
-                  }
-                />
-
-                {/* Administrative Review Authority Dashboard */}
-                <Route
-                  path="/review"
-                  element={
-                    <ProtectedRoute allowedRoles={['ADMIN_REVIEW_AUTHORITY']}>
-                      <AdminReviewDashboard />
                     </ProtectedRoute>
                   }
                 />

@@ -9,7 +9,6 @@ class UserRole(str, enum.Enum):
     CITIZEN = "CITIZEN"
     DISTRICT_ADMIN = "DISTRICT_ADMIN"
     OFFICER = "OFFICER"
-    ADMIN_REVIEW_AUTHORITY = "ADMIN_REVIEW_AUTHORITY"
 
 class User(Base):
     __tablename__ = "users"

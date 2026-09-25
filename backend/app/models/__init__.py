@@ -6,7 +6,6 @@ from app.models.complaint import (
     ComplaintMessage, Feedback, Escalation, ReopenRequest, ComplaintStatus
 )
 from app.models.notification import Notification
-from app.models.review import AdminReport, AdminReportHistory, AdminReportStatus
 from app.models.audit import AuditLog
 from app.models.ai import AIRecommendation, AIInsight
 
@@ -17,7 +16,6 @@ __all__ = [
     "Complaint", "AnonymousAccessSession", "ComplaintAttachment", "ComplaintStatusHistory",
     "ComplaintMessage", "Feedback", "Escalation", "ReopenRequest", "ComplaintStatus",
     "Notification",
-    "AdminReport", "AdminReportHistory", "AdminReportStatus",
     "AuditLog",
     "AIRecommendation", "AIInsight"
 ]

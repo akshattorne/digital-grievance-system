@@ -54,11 +54,11 @@ class Settings(BaseSettings):
     # Administrative Review Threshold
     ADMIN_REPORT_THRESHOLD: int = 3  # Valid reports flagging district admin for review
     
-    # Demo Seed Passwords
-    SEED_CITIZEN_PASSWORD: str = "Citizen@123"
-    SEED_ADMIN_PASSWORD: str = "Admin@123"
-    SEED_OFFICER_PASSWORD: str = "Officer@123"
-    SEED_REVIEW_PASSWORD: str = "Authority@123"
+    # Demo Seed Passwords (provisioned securely if set, otherwise auto-generated)
+    SEED_CITIZEN_PASSWORD: Optional[str] = None
+    SEED_ADMIN_PASSWORD: Optional[str] = None
+    SEED_OFFICER_PASSWORD: Optional[str] = None
+    SEED_REVIEW_PASSWORD: Optional[str] = None
 
     model_config = ConfigDict(env_file=".env", case_sensitive=True)
 

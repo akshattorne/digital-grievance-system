@@ -8,7 +8,7 @@ from app.core.config import settings
 from app.core.database import engine, Base
 from app.api import (
     auth, complaints, district_admin, officers,
-    admin_review, analytics, ai, notifications, attachments
+    analytics, ai, notifications, attachments
 )
 
 @asynccontextmanager
@@ -42,7 +42,6 @@ app.include_router(auth.router, prefix=api_v1_prefix)
 app.include_router(complaints.router, prefix=api_v1_prefix)
 app.include_router(district_admin.router, prefix=api_v1_prefix)
 app.include_router(officers.router, prefix=api_v1_prefix)
-app.include_router(admin_review.router, prefix=api_v1_prefix)
 app.include_router(analytics.router, prefix=api_v1_prefix)
 app.include_router(ai.router, prefix=api_v1_prefix)
 app.include_router(notifications.router, prefix=api_v1_prefix)

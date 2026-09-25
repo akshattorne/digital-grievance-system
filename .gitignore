@@ -2,12 +2,15 @@
 .env
 .env.local
 *.env
+.local/
+docs/LOCAL_CREDENTIALS.md
+docs/ALL_CREDENTIALS_EXTRACT.md
 
 # Python
 backend/.venv/
 **/__pycache__/
 *.py[cod]
-backend/*.db
+*.db
 backend/uploads/
 .pytest_cache/
 
@@ -21,3 +24,4 @@ frontend/dist-ssr/
 .DS_Store
 .vscode/
 .idea/
+

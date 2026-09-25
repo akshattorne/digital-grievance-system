@@ -6,44 +6,53 @@
 [![Vite](https://img.shields.io/badge/Build-Vite-646CFF.svg)](https://vitejs.dev/)
 [![PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL%2FSupabase-4169E1.svg)](https://supabase.com/)
 
-A complete, production-style civic grievance redressal portal built for the **Government of Madhya Pradesh** and integrated with **MPOnline** governance workflows.
+A complete, production-grade civic grievance redressal portal built for the **Government of Madhya Pradesh** and integrated with **MPOnline** governance workflows.
 
-The application provides transparent, time-bound, SLA-monitored grievance redressal for citizens across all 55 districts of Madhya Pradesh, with strict district data isolation, dynamic category-to-department routing, structured citizen-officer communication, administrative review mechanisms, optional Gemini AI recommendation & executive insight layer, and bilingual support (English + Hindi).
+The application provides transparent, time-bound, SLA-monitored grievance redressal for citizens across all **55 districts of Madhya Pradesh**, with strict district data isolation, dynamic category-to-department routing, structured citizen-officer communication, administrative review mechanisms, optional Gemini AI recommendation & executive insight layer, and bilingual support (English + Hindi).
 
 ---
 
 ## 🏛️ System Features & Key Highlights
 
 - **Registered Citizen Portal**: Registration, Login with JWT access/refresh token rotation, Password Reset, Dashboard, Grievance Submission, SLA Countdown, Structured Communication, Resolution Feedback & Reopen Requests.
-- **Anonymous Citizen Engine**: Submit grievances without creating an account. Generates Complaint ID + Secret Tracking Code + Secure Session Access Token. IDENTITY IS NEVER EXPOSED UNNECESSARILY.
-- **Strict District Data Isolation**: District Admins and Grievance Officers can ONLY query, manage, and view data belonging to their assigned district. Cross-district data queries return HTTP 403 Forbidden.
+- **Anonymous Citizen Engine**: Submit grievances without creating an account. Generates Complaint ID + Secret Tracking Code + Secure Session Access Token. Citizen identity is never exposed unnecessarily.
+- **55 Madhya Pradesh Districts & 440 Department Officer Accounts**: Authoritative seeding provisions District Admin accounts for all 55 MP districts and 440 officer accounts (55 districts × 8 departments).
+- **Strict District Data Isolation**: District Admins and Grievance Officers can ONLY query, manage, and view data belonging to their assigned district. Cross-district data queries return HTTP 403 Forbidden on the backend.
 - **Dynamic Category → Department SLA Routing**: System maps category to department. Priority (`HIGH`: 0.5x, `MEDIUM`: 1.0x, `LOW`: 1.5x) dynamically modifies the SLA deadline.
 - **Workload-Based Officer Assignment**: System auto-recommends eligible officers based on matching department, same district, active availability status, and lowest active workload.
 - **Administrative Review Authority**: Internal authorized oversight portal allowing citizens to submit misconduct reports against District Admins. Validated report threshold flags District Admins for human review (NO automated penalty or replacement).
 - **Optional Gemini AI Layer**: Uses Gemini API for smart category/priority recommendations and executive district insights. IF GEMINI IS UNAVAILABLE OR UNCONFIGURED, THE SYSTEM AUTOMATICALLY FALLS BACK TO A KEYWORD RULE ENGINE WITHOUT BREAKING CORE FUNCTIONALITY.
+- **Secure Credential Management**: No hardcoded passwords in version control. Running `python seed.py` or `python scripts/generate_demo_credentials.py` generates cryptographically secure passwords and exports them to `.local/LOCAL_CREDENTIALS.md` (which is strictly gitignored).
 - **Bilingual Interface (i18n)**: Instant English and Hindi UI toggle across public landing page, forms, dashboards, and error messages.
 - **Public Portal Analytics**: Aggregated and anonymized public metrics & category trends charts. ZERO citizen names, emails, phones, or private text exposed.
 
 ---
 
-## 🔑 Demo Role Credentials
+## 🔑 Credential Provisioning & Demo Access
 
-| Role | Email | Password | Access / Scope |
-| :--- | :--- | :--- | :--- |
-| **Registered Citizen** | `citizen@example.com` | `Citizen@123` | Submit & track personal grievances, feedback |
-| **District Admin (Indore)** | `admin.indore@mp.gov.in` | `Admin@123` | Isolated to Indore district (IND) complaints & officers |
-| **District Admin (Bhopal)** | `admin.bhopal@mp.gov.in` | `Admin@123` | Isolated to Bhopal district (BHO) complaints & officers |
-| **Grievance Officer (PHE)** | `officer.water.indore@mp.gov.in` | `Officer@123` | Assigned water supply grievances in Indore |
-| **Grievance Officer (PWD)** | `officer.pwd.indore@mp.gov.in` | `Officer@123` | Assigned road repair grievances in Indore |
-| **Admin Review Authority** | `review.authority@mp.gov.in` | `Authority@123` | Statewide oversight of reports against District Admins |
+For security, plaintext demo credentials are **never hardcoded in source files or public README**.
+
+To generate and retrieve demo credentials locally:
+```bash
+cd backend
+python seed.py
+```
+This script provisions:
+1. **1 Registered Citizen Demo Account** (`citizen@example.com`)
+2. **1 Administrative Review Authority Account** (`review.authority@mp.gov.in`)
+3. **55 District Admin Accounts** (`admin.<district_code_lower>@mp.gov.in`, e.g., `admin.ind@mp.gov.in`, `admin.bho@mp.gov.in`)
+4. **440 Department Officer Accounts** (`officer.<district_code_lower>.<dept_code_lower>@mp.gov.in`, e.g., `officer.ind.pwd@mp.gov.in`)
+
+Plaintext generated passwords are automatically saved to your local gitignored file:
+`digital-grievance-system/.local/LOCAL_CREDENTIALS.md`
 
 ---
 
 ## 🛠️ Technology Stack
 
-- **Frontend**: React 18, Vite, React Router v6, Recharts, Lucide Icons, Custom Civic CSS System, i18n English/Hindi Localization.
+- **Frontend**: React 18, Vite, React Router v6, Recharts, Lucide Icons, Custom Responsive Civic CSS System, i18n English/Hindi Localization.
 - **Backend**: Python 3.10+, FastAPI, Pydantic v2, SQLAlchemy 2.0 (Async), PyJWT, Bcrypt hashing.
-- **Database**: Supabase PostgreSQL (Production) / SQLite (Local Dev & Pytest).
+- **Database**: PostgreSQL / Supabase (Production) / SQLite (Local Dev & Pytest).
 - **Storage**: Private Storage Service with access-controlled file view proxy.
 - **AI**: Gemini API with Keyword Rule Engine Fallback.
 - **Email**: Configurable Email Provider Abstraction (Mock / SMTP / Resend).
@@ -62,8 +71,9 @@ digital-grievance-system/
 │   │   ├── schemas/        # Pydantic Schemas
 │   │   ├── services/       # Business Logic (SLA, Assignment, AI, Email, Storage)
 │   │   └── main.py         # FastAPI App Entrypoint & CORS setup
+│   ├── scripts/            # Credential Provisioning & Demo Seed Generator
 │   ├── tests/              # Pytest Async Test Suite
-│   ├── seed.py             # Seed Script for all 55 MP Districts, Depts, Categories & Accounts
+│   ├── seed.py             # Database Seed Entrypoint
 │   └── requirements.txt
 ├── frontend/
 │   ├── src/
@@ -72,7 +82,7 @@ digital-grievance-system/
 │   │   ├── i18n/           # English (en.json) & Hindi (hi.json) Translations
 │   │   ├── pages/          # LandingPage, Login, Register, Dashboards, ComplaintDetail
 │   │   ├── services/       # Axios API Client
-│   │   └── styles/         # Global HSL Civic Styling & CSS Utility Variables
+      │   └── styles/         # Global Civic Styling & Responsive Tokens
 │   └── package.json
 ├── docs/                   # Architecture, DB Schema, API Specs, Deployment & Testing Reports
 ├── .env.example
@@ -89,9 +99,8 @@ cd backend
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-pip install email-validator
 
-# Run database seed script (Populates MP Districts, Depts, Demo Accounts)
+# Seed all 55 MP Districts, Departments, SLA Rules & Accounts
 python seed.py
 
 # Start FastAPI server
@@ -110,7 +119,13 @@ Frontend Web Portal: `http://localhost:5173`
 ### 3. Run Backend Automated Test Suite
 ```bash
 cd backend
-PYTHONPATH=. .venv/bin/python -m pytest -v
+PYTHONPATH=. .venv/bin/pytest tests/
+```
+
+### 4. Build Production Frontend
+```bash
+cd frontend
+npm run build
 ```
 
 ---

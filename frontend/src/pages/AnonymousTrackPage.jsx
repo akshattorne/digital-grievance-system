@@ -74,7 +74,7 @@ export const AnonymousTrackPage = () => {
       <div className="card" style={{ marginBottom: '2rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
           <Shield size={24} color="var(--primary-600)" />
-          <h2 style={{ fontSize: '1.4rem', color: 'var(--gov-navy)' }}>Track Anonymous / Public Grievance</h2>
+          <h2 style={{ fontSize: '1.4rem', color: 'var(--gov-navy)' }}>Track Anonymous Grievance</h2>
         </div>
 
         {error && (

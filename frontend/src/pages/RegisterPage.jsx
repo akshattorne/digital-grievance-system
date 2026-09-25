@@ -28,7 +28,14 @@ export const RegisterPage = () => {
         navigate('/login');
       }, 1500);
     } catch (err) {
-      setError(err.response?.data?.detail || 'Registration failed. Please check inputs.');
+      const detail = err.response?.data?.detail;
+      let msg = 'Registration failed. Please check inputs.';
+      if (typeof detail === 'string') {
+        msg = detail;
+      } else if (Array.isArray(detail)) {
+        msg = detail.map((d) => d.msg || d.detail || JSON.stringify(d)).join(', ');
+      }
+      setError(msg);
     } finally {
       setLoading(false);
     }

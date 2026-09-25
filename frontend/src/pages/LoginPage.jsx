@@ -23,8 +23,6 @@ export const LoginPage = () => {
         navigate('/admin');
       } else if (user.role === 'OFFICER') {
         navigate('/officer');
-      } else if (user.role === 'ADMIN_REVIEW_AUTHORITY') {
-        navigate('/review');
       } else {
         navigate('/dashboard');
       }

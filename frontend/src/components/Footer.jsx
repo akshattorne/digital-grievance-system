@@ -18,7 +18,7 @@ export const Footer = () => {
           <div style={{ color: '#ffffff', fontWeight: '700', fontSize: '0.95rem', marginBottom: '0.75rem' }}>Useful Links</div>
           <ul style={{ listStyle: 'none', fontSize: '0.875rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             <li><a href="/" style={{ color: '#94a3b8' }}>Public Analytics</a></li>
-            <li><a href="/track" style={{ color: '#94a3b8' }}>Track Complaint Status</a></li>
+            <li><a href="/track" style={{ color: '#94a3b8' }}>Track Anonymous Grievance</a></li>
             <li><a href="/admin-report" style={{ color: '#94a3b8' }}>Report District Admin Misconduct</a></li>
           </ul>
         </div>

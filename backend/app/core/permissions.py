@@ -75,14 +75,13 @@ def require_roles(allowed_roles: List[UserRole]):
 require_citizen = require_roles([UserRole.CITIZEN])
 require_district_admin = require_roles([UserRole.DISTRICT_ADMIN])
 require_officer = require_roles([UserRole.OFFICER])
-require_admin_review_authority = require_roles([UserRole.ADMIN_REVIEW_AUTHORITY])
 require_admin_or_officer = require_roles([UserRole.DISTRICT_ADMIN, UserRole.OFFICER])
 
 def enforce_district_isolation(user: User, target_district_code: str) -> str:
     """
     Enforces strict district isolation.
     District Admin & Officers can ONLY access data in their assigned district.
-    Administrative Review Authority and Citizens are exempt (or restricted by ownership).
+    Citizens are restricted by ownership.
     """
     if user.role == UserRole.DISTRICT_ADMIN:
         if not user.district_admin_profile or user.district_admin_profile.district_code != target_district_code:

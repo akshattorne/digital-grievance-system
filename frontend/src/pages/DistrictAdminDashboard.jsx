@@ -42,7 +42,7 @@ export const DistrictAdminDashboard = () => {
         api.get('/district-admin/dashboard'),
         api.get(`/district-admin/complaints?status_filter=${statusFilter}&search_query=${searchQuery}`),
         api.get('/district-admin/officers'),
-        api.get('/district-admin/departments').catch(() => ({ data: [] }))
+        api.get('/complaints/departments').catch(() => ({ data: [] }))
       ]);
 
       setDashboardMetrics(dashRes.data);

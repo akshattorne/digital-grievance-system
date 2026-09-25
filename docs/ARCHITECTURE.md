@@ -22,9 +22,8 @@ The **Digital Grievance Redressal System** is an MPOnline / Madhya Pradesh gover
 1. **Role-Based Access Control (RBAC)**:
    - `CITIZEN`: Submit registered grievances, view timeline, send messages, rate resolution.
    - `ANONYMOUS`: Submit anonymous complaints with Complaint ID + Tracking Code token session.
-   - `DISTRICT_ADMIN`: Isolated data control over assigned district, officer management, category/department correction, workload assignment, SLA monitoring.
+   - `DISTRICT_ADMIN`: Highest operational administrative role; isolated data control over assigned district, officer management, category/department correction, workload assignment, SLA monitoring.
    - `OFFICER`: Process assigned tasks, update progress, request information, mark resolved with summary.
-   - `ADMIN_REVIEW_AUTHORITY`: Oversight for reported District Admin misconduct.
 
 2. **Strict District Data Isolation**:
    - Every database query for District Admins and Grievance Officers automatically enforces a `district_code` filter.

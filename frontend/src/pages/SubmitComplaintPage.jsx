@@ -5,16 +5,7 @@ import { AIRecommendationCard } from '../components/AIRecommendationCard';
 import api from '../services/api';
 import { FileText, Send, Sparkles, AlertCircle, ShieldCheck, Upload } from 'lucide-react';
 
-const MP_DISTRICTS = [
-  { code: 'IND', name: 'Indore' },
-  { code: 'BHO', name: 'Bhopal' },
-  { code: 'GWL', name: 'Gwalior' },
-  { code: 'JAB', name: 'Jabalpur' },
-  { code: 'UJJ', name: 'Ujjain' },
-  { code: 'SAG', name: 'Sagar' },
-  { code: 'REW', name: 'Rewa' },
-  { code: 'SAT', name: 'Satna' }
-];
+import { ALL_MP_DISTRICTS } from '../constants/districts';
 
 export const SubmitComplaintPage = () => {
   const { user } = useAuth();
@@ -24,13 +15,15 @@ export const SubmitComplaintPage = () => {
   const isAnonQuery = searchParams.get('anonymous') === 'true';
   const [isAnonymous, setIsAnonymous] = useState(isAnonQuery || !user);
 
-  const [districts, setDistricts] = useState(MP_DISTRICTS);
+  const [districts, setDistricts] = useState(ALL_MP_DISTRICTS);
   const [categories, setCategories] = useState([]);
+  const [departments, setDepartments] = useState([]);
   const [formData, setFormData] = useState({
     subject: '',
     description: '',
     district_code: 'IND',
     category_id: '',
+    department_id: '',
     priority: 'MEDIUM',
     location_address: '',
     contact_email: user?.email || '',
@@ -45,26 +38,46 @@ export const SubmitComplaintPage = () => {
 
   useEffect(() => {
     const loadFormData = async () => {
-      try {
-        const [catRes, distRes] = await Promise.all([
-          api.get('/complaints/categories'),
-          api.get('/complaints/districts').catch(() => ({ data: [] }))
-        ]);
-        
-        if (catRes.data && catRes.data.length > 0) {
-          setCategories(catRes.data);
-          setFormData((prev) => ({ ...prev, category_id: catRes.data[0].id }));
-        }
+      const results = await Promise.allSettled([
+        api.get('/complaints/categories'),
+        api.get('/complaints/districts'),
+        api.get('/complaints/departments')
+      ]);
 
-        if (distRes.data && distRes.data.length > 0) {
-          setDistricts(distRes.data.map(d => ({ code: d.code, name: d.name_en })));
-        }
-      } catch (err) {
-        console.error('Error loading categories:', err);
+      const [catResult, distResult, deptResult] = results;
+
+      if (catResult.status === 'fulfilled' && catResult.value.data?.length > 0) {
+        const catList = catResult.value.data;
+        setCategories(catList);
+        const firstCat = catList[0];
+        const initialDeptId = firstCat.mappings?.[0]?.department_id || '';
+        setFormData((prev) => ({
+          ...prev,
+          category_id: firstCat.id,
+          department_id: prev.department_id || initialDeptId
+        }));
+      }
+
+      if (distResult.status === 'fulfilled' && distResult.value.data?.length > 0) {
+        setDistricts(distResult.value.data.map(d => ({ code: d.code, name: d.name_en })));
+      }
+
+      if (deptResult.status === 'fulfilled' && deptResult.value.data?.length > 0) {
+        setDepartments(deptResult.value.data);
       }
     };
     loadFormData();
   }, []);
+
+  const handleCategoryChange = (catId) => {
+    const selectedCat = categories.find(c => c.id === catId);
+    const targetDeptId = selectedCat?.mappings?.[0]?.department_id || formData.department_id;
+    setFormData((prev) => ({
+      ...prev,
+      category_id: catId,
+      department_id: targetDeptId
+    }));
+  };
 
   const handleGetAiRecommendation = async () => {
     if (!formData.description || formData.description.length < 5) {
@@ -110,7 +123,14 @@ export const SubmitComplaintPage = () => {
         navigate(`/complaints/${res.data.id}`);
       }
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to submit grievance. Please verify input fields.');
+      const detail = err.response?.data?.detail;
+      let msg = 'Failed to submit grievance. Please verify input fields.';
+      if (typeof detail === 'string') {
+        msg = detail;
+      } else if (Array.isArray(detail)) {
+        msg = detail.map((d) => d.msg || d.detail || JSON.stringify(d)).join(', ');
+      }
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -199,7 +219,7 @@ export const SubmitComplaintPage = () => {
         )}
 
         <form onSubmit={handleSubmit}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
             <div className="form-group">
               <label className="form-label">Select District</label>
               <select
@@ -218,11 +238,28 @@ export const SubmitComplaintPage = () => {
               <select
                 className="form-select"
                 value={formData.category_id}
-                onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
+                onChange={(e) => handleCategoryChange(e.target.value)}
               >
                 {categories.map((c) => (
                   <option key={c.id} value={c.id}>{c.name_en}</option>
                 ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Target Department</label>
+              <select
+                className="form-select"
+                value={formData.department_id || ''}
+                onChange={(e) => setFormData({ ...formData, department_id: e.target.value })}
+              >
+                {departments.length === 0 ? (
+                  <option value="">Auto-Assigned by Category</option>
+                ) : (
+                  departments.map((dep) => (
+                    <option key={dep.id} value={dep.id}>{dep.name_en} ({dep.code})</option>
+                  ))
+                )}
               </select>
             </div>
           </div>

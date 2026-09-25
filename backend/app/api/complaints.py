@@ -21,7 +21,7 @@ from app.schemas.complaint import (
     AnonymousTrackResponse, ComplaintResponse, ComplaintDetailResponse,
     MessageCreateRequest, FeedbackCreateRequest, ReopenRequestCreateRequest, EscalationCreateRequest
 )
-from app.schemas.grievance import SimpleCategoryResponse, DistrictResponse
+from app.schemas.grievance import SimpleCategoryResponse, DistrictResponse, DepartmentResponse, CategoryResponse
 from app.services.complaint_service import ComplaintService
 from app.services.notification_service import NotificationService
 from app.services.ai_service import AIService
@@ -69,14 +69,24 @@ async def _validate_submission_location(db: AsyncSession, district_code: str) ->
     if not district.scalar_one_or_none():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Selected district not found or inactive")
 
-@router.get("/categories", response_model=List[SimpleCategoryResponse])
+@router.get("/categories", response_model=List[CategoryResponse])
 async def get_public_categories(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Category).where(Category.is_active == True).order_by(Category.name_en))
+    result = await db.execute(
+        select(Category)
+        .options(selectinload(Category.mappings).selectinload(CategoryDepartmentMapping.department))
+        .where(Category.is_active == True)
+        .order_by(Category.name_en)
+    )
     return result.scalars().all()
 
 @router.get("/districts", response_model=List[DistrictResponse])
 async def get_public_districts(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(District).where(District.is_active == True).order_by(District.name_en))
+    return result.scalars().all()
+
+@router.get("/departments", response_model=List[DepartmentResponse])
+async def get_public_departments(db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Department).where(Department.is_active == True).order_by(Department.name_en))
     return result.scalars().all()
 
 
