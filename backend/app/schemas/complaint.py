@@ -1,5 +1,5 @@
 from typing import Optional, List
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 from datetime import datetime
 from app.models.grievance import PriorityEnum
 from app.models.complaint import ComplaintStatus
@@ -14,6 +14,24 @@ class ComplaintCreateRequest(BaseModel):
     priority: PriorityEnum = PriorityEnum.MEDIUM
     contact_email: Optional[EmailStr] = None
     contact_mobile: Optional[str] = None
+
+    @field_validator('contact_email', mode='before')
+    @classmethod
+    def sanitize_contact_email(cls, v):
+        if isinstance(v, str):
+            v = v.strip()
+            if not v:
+                return None
+        return v
+
+    @field_validator('contact_mobile', mode='before')
+    @classmethod
+    def sanitize_contact_mobile(cls, v):
+        if isinstance(v, str):
+            v = v.strip()
+            if not v:
+                return None
+        return v
 
 class AnonymousComplaintCreateRequest(ComplaintCreateRequest):
     contact_email: Optional[EmailStr] = None

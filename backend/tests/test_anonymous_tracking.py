@@ -45,3 +45,28 @@ async def test_anonymous_submission_and_tracking(client: AsyncClient, db_session
         "tracking_code": "WRONG_CODE"
     })
     assert invalid_resp.status_code == 404
+
+@pytest.mark.asyncio
+async def test_anonymous_submission_with_empty_email(client: AsyncClient, db_session):
+    dist = District(code="IND", name_en="Indore", name_hi="इन्दौर", is_active=True)
+    dept = Department(code="WATER_DEPT", name_en="Water Dept", name_hi="जल", is_active=True)
+    cat = Category(code="WATER", name_en="Water Supply", name_hi="जल", default_sla_hours=48.0, is_active=True)
+    db_session.add_all([dist, dept, cat])
+    await db_session.commit()
+
+    # Submit anonymous complaint with empty string contact_email
+    sub_resp = await client.post("/api/v1/complaints/submit-anonymous", json={
+        "subject": "Water Leakage on Street",
+        "description": "Pipe broken near temple in Indore silicon city",
+        "district_code": "IND",
+        "location_address": "Silicon City",
+        "category_id": cat.id,
+        "priority": "MEDIUM",
+        "contact_email": "",
+        "contact_mobile": ""
+    })
+    assert sub_resp.status_code == 201, sub_resp.text
+    data = sub_resp.json()
+    assert "complaint_no" in data
+    assert "tracking_code" in data
+

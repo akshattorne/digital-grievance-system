@@ -130,13 +130,19 @@ export const SubmitComplaintPage = () => {
     setLoading(true);
 
     try {
+      const payload = {
+        ...formData,
+        contact_email: formData.contact_email?.trim() || null,
+        contact_mobile: formData.contact_mobile?.trim() || null,
+      };
+
       let createdComplaintId = null;
       if (isAnonymous) {
-        const res = await api.post('/complaints/submit-anonymous', formData);
+        const res = await api.post('/complaints/submit-anonymous', payload);
         createdComplaintId = res.data.id;
         setAnonSuccessData(res.data);
       } else {
-        const res = await api.post('/complaints/submit', formData);
+        const res = await api.post('/complaints/submit', payload);
         createdComplaintId = res.data.id;
       }
 
