@@ -46,12 +46,18 @@ export const OfficerDashboard = () => {
 
   const handleHold = async (cmpId) => {
     const remarks = prompt('Enter reason for placing complaint on hold:');
-    if (!remarks) return;
+    if (!remarks || !remarks.trim()) return;
     try {
-      await api.post(`/officer/complaints/${cmpId}/hold?remarks=${encodeURIComponent(remarks)}`);
+      await api.post(`/officer/complaints/${cmpId}/hold?remarks=${encodeURIComponent(remarks.trim())}`, {
+        remarks: remarks.trim()
+      });
       fetchData();
     } catch (err) {
-      alert('Failed to place on hold');
+      const detail = err.response?.data?.detail;
+      let msg = 'Failed to place on hold';
+      if (typeof detail === 'string') msg = detail;
+      else if (Array.isArray(detail)) msg = detail.map((d) => d.msg || d.detail || JSON.stringify(d)).join(', ');
+      alert(msg);
     }
   };
 
@@ -59,14 +65,18 @@ export const OfficerDashboard = () => {
     e.preventDefault();
     if (!selectedComplaint || !resolutionSummary.trim()) return;
     try {
-      await api.post(`/officer/complaints/${selectedComplaint.id}/resolve`, {
-        resolution_summary: resolutionSummary
+      await api.post(`/officer/complaints/${selectedComplaint.id}/resolve?resolution_summary=${encodeURIComponent(resolutionSummary.trim())}`, {
+        resolution_summary: resolutionSummary.trim()
       });
       setShowResolveModal(false);
       setResolutionSummary('');
       fetchData();
     } catch (err) {
-      alert('Resolution submission failed');
+      const detail = err.response?.data?.detail;
+      let msg = 'Resolution submission failed';
+      if (typeof detail === 'string') msg = detail;
+      else if (Array.isArray(detail)) msg = detail.map((d) => d.msg || d.detail || JSON.stringify(d)).join(', ');
+      alert(msg);
     }
   };
 

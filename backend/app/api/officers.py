@@ -9,7 +9,10 @@ from app.core.database import get_db
 from app.core.permissions import require_officer, enforce_district_isolation
 from app.models.user import User
 from app.models.complaint import Complaint, ComplaintStatus
-from app.schemas.complaint import ComplaintResponse, ComplaintDetailResponse, StatusUpdateRequest
+from app.schemas.complaint import (
+    ComplaintResponse, ComplaintDetailResponse, StatusUpdateRequest,
+    ResolveComplaintRequest, HoldComplaintRequest
+)
 from app.services.complaint_service import ComplaintService
 from app.services.assignment_service import AssignmentService
 from app.services.notification_service import NotificationService
@@ -97,10 +100,15 @@ async def start_complaint_progress(
 @router.post("/complaints/{complaint_id}/hold")
 async def put_complaint_on_hold(
     complaint_id: str,
-    remarks: str,
+    payload: Optional[HoldComplaintRequest] = None,
+    remarks: Optional[str] = None,
     current_user: User = Depends(require_officer),
     db: AsyncSession = Depends(get_db)
 ):
+    final_remarks = (payload.remarks if payload and payload.remarks else remarks) or ""
+    if not final_remarks.strip():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Remarks are required when placing a complaint on hold")
+
     result = await db.execute(select(Complaint).where(Complaint.id == complaint_id))
     complaint = result.scalar_one_or_none()
     if not complaint or complaint.assigned_officer_id != current_user.id:
@@ -114,7 +122,7 @@ async def put_complaint_on_hold(
 
     await ComplaintService.record_status_history(
         db, complaint.id, prev_status, ComplaintStatus.ON_HOLD.value,
-        current_user.id, "OFFICER", f"On Hold: {remarks}"
+        current_user.id, "OFFICER", f"On Hold: {final_remarks.strip()}"
     )
     await db.commit()
     return {"message": "Complaint placed ON_HOLD."}
@@ -122,11 +130,18 @@ async def put_complaint_on_hold(
 @router.post("/complaints/{complaint_id}/resolve")
 async def mark_complaint_resolved(
     complaint_id: str,
-    resolution_summary: str,
+    payload: Optional[ResolveComplaintRequest] = None,
+    resolution_summary: Optional[str] = None,
     remarks: Optional[str] = None,
     current_user: User = Depends(require_officer),
     db: AsyncSession = Depends(get_db)
 ):
+    final_summary = (payload.resolution_summary if payload and payload.resolution_summary else resolution_summary) or ""
+    final_remarks = (payload.remarks if payload and payload.remarks else remarks) or ""
+
+    if not final_summary.strip():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Resolution summary is required")
+
     result = await db.execute(select(Complaint).where(Complaint.id == complaint_id))
     complaint = result.scalar_one_or_none()
     if not complaint or complaint.assigned_officer_id != current_user.id:
@@ -136,7 +151,7 @@ async def mark_complaint_resolved(
 
     prev_status = complaint.status.value
     complaint.status = ComplaintStatus.RESOLVED
-    complaint.resolution_summary = resolution_summary
+    complaint.resolution_summary = final_summary.strip()
     complaint.resolved_at = datetime.now(timezone.utc)
     db.add(complaint)
 
@@ -144,7 +159,7 @@ async def mark_complaint_resolved(
 
     await ComplaintService.record_status_history(
         db, complaint.id, prev_status, ComplaintStatus.RESOLVED.value,
-        current_user.id, "OFFICER", f"Resolution: {resolution_summary}. {remarks or ''}"
+        current_user.id, "OFFICER", f"Resolution: {final_summary.strip()}. {final_remarks.strip()}"
     )
 
     if complaint.citizen_id:
@@ -158,3 +173,4 @@ async def mark_complaint_resolved(
 
     await db.commit()
     return {"message": "Complaint marked RESOLVED successfully."}
+

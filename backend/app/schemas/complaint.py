@@ -166,3 +166,11 @@ class ReopenRequestCreateRequest(BaseModel):
 
 class EscalationCreateRequest(BaseModel):
     reason: str = Field(..., min_length=10)
+
+class ResolveComplaintRequest(BaseModel):
+    resolution_summary: Optional[str] = None
+    remarks: Optional[str] = None
+
+class HoldComplaintRequest(BaseModel):
+    remarks: Optional[str] = None
+
